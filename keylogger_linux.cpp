@@ -71,6 +71,19 @@ std::map<int, std::string> shiftKeyMap = {
     {KEY_GRAVE, "~"}, {KEY_COMMA, "<"}, {KEY_DOT, ">"}, {KEY_SLASH, "?"},
 };
 
+// Function to get the log file path from command-line arguments or default to the user's home directory
+string getLogFilePath(int argc, char* argv[]) {
+    if (argc > 1) {
+        return string(argv[1]) + "/.config/spark/log.txt"; // Use provided path
+    }
+    const char* homeDir = getenv("HOME");
+    if (!homeDir) {
+        cerr << "Error: HOME environment variable not set and no log file path provided. Exiting." << endl;
+        exit(1);
+    }
+    return string(homeDir) + "/.config/spark/log.txt"; // Default path
+}
+
 // Function to get the active window name
 string getActiveWindowName() {
     char buffer[128];
@@ -100,13 +113,9 @@ string getClipboardContent() {
     return result;
 }
 
-int main() {
-    const char* homeDir = getenv("HOME");
-    if (!homeDir) {
-        cerr << "Error: HOME environment variable not set." << endl;
-        return 1;
-    }
-    string logFilePath = string(homeDir) + "/.config/spark/log.txt";
+int main(int argc, char* argv[]) {
+    // Get the log file path
+    string logFilePath = getLogFilePath(argc, argv);
 
     vector<int> keyboard_fds; // To store multiple keyboard file descriptors
     vector<int> mouse_fds;    // To store multiple mouse file descriptors
